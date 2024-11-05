@@ -8,9 +8,9 @@ namespace Domain
 {
     public interface IElevatorControlService
     {
-        IElevator GetNearestElevator(int requestedFloor);
-        void MoveToFloor(IElevator elevator, int floor, int passengers);
-        string GetElevatorStatusById(int elevatorId);
+        (IElevator? elevator, ErrorCode? errorCode) GetNearestElevator(int requestedFloor, Direction requestedDirection);
+        ErrorCode? MoveToFloor(IElevator elevator, int floor, int passengers);
+        (string status, ErrorCode? errorCode) GetElevatorStatusById(int elevatorId);
         int ElevatorCount { get; }
     }
 }

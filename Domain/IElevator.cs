@@ -11,7 +11,14 @@ namespace Domain
         int Id { get; }
         int CurrentFloor { get; }
         int PassengerCount { get; }
-        void MoveToFloor(int floor);
-        void LoadPassengers(int count);
+
+        // Add MaxPassengerCount and MaxFloor properties
+        int MaxPassengerCount { get; }
+        int MaxFloor { get; }
+        Direction Direction { get; }
+
+        ErrorCode? MoveToFloor(int floor);
+        ErrorCode? LoadPassengers(int count);
+        bool AddPassengers(int count);
     }
 }

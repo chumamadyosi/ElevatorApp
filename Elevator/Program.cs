@@ -2,46 +2,52 @@
 using Domain;
 using ElevatorConsole;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using System;
+using System.Threading.Tasks;
+
 namespace ElevatorApp
 {
     class Program
     {
-        static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
-            // Load settings from appsettings.json
-            var elevatorSettings = LoadElevatorSettings();
+            using var host = CreateHostBuilder(args).Build();
+            var consoleManager = host.Services.GetRequiredService<ElevatorConsoleManager>();
 
-            // Initialize elevators based on configuration
-            var elevators = new List<IElevator>();
-            for (int i = 1; i <= elevatorSettings.NumberOfElevators; i++)
-            {
-                elevators.Add(new Elevator(i));
-            }
-
-            int _totalFloors = elevatorSettings.NumberOfFloors;
-
-            // Initialize the elevator control service and console manager
-            var elevatorControlService = new ElevatorControlService(elevators);
-            var elevatorConsoleManager = new ElevatorConsoleManager(elevatorControlService, _totalFloors);
-
-            Console.WriteLine("Commands: 'call <floor> <passengers>', 'status'");
-            while (true)
-            {
-                var input = Console.ReadLine();
-                elevatorConsoleManager.HandleCommand(input);
-            }
+            await consoleManager.RunAsync();
         }
 
-        private static ElevatorSettings LoadElevatorSettings()
-        {
-            // Setup configuration to read from appsettings.json
-            var config = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json", false, false)
-                .Build();
+        public static IHostBuilder CreateHostBuilder(string[] args) =>
+            Host.CreateDefaultBuilder(args)
+                .ConfigureServices((hostContext, services) =>
+                {
+                    // Configure building and elevator settings
+                    var buildingSettings = hostContext.Configuration.GetSection("BuildingSettings").Get<BuildingSettings>();
+                    services.AddSingleton(buildingSettings);
 
-            // Bind settings to ElevatorSettings class
-            return config.GetSection("ElevatorSettings").Get<ElevatorSettings>()?? new ElevatorSettings(); // Ensure a fallback if null
-        }
+                    // Register the elevator control service and console manager
+                    services.AddScoped<IElevatorControlService, ElevatorControlService>();
+                    services.AddSingleton<ElevatorConsoleManager>();
+
+                    // Register and configure elevators based on settings
+                    services.AddSingleton(serviceProvider =>
+                    {
+                        var settings = serviceProvider.GetRequiredService<BuildingSettings>();
+                        var elevators = new List<IElevator>();
+
+                        foreach (var config in settings.ElevatorSettings.Elevators)
+                        {
+                            elevators.Add(new Elevator(config.Id)
+                            {
+                                MaxFloor = config.MaxFloor,
+                                MaxPassengerCount = config.MaxPassengerCount
+                            });
+                        }
+
+                        return elevators;
+                    });
+                });
     }
 }
