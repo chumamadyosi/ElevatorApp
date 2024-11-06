@@ -11,10 +11,8 @@ namespace Domain
         (Elevator? elevator, ErrorCode? errorCode) GetNearestElevator(int requestedFloor, Direction requestedDirection);
         // Request elevator to a specific floor and load passengers
         Task<ErrorCode?> RequestElevatorToFloor(Elevator elevator, int requestedFloor, int passengers);
-
         // Move elevator to the destination floor
         Task<ErrorCode?> MoveElevatorToDestinationFloor(Elevator elevator, int destinationFloor);
-
         // Get elevator status by its ID
         (string status, ErrorCode? errorCode) GetElevatorStatusById(int elevatorId);
         // Elevator operation methods
