@@ -14,7 +14,9 @@ namespace Domain
         ExceedsPassengerCapacity = 1003,
         NullElevator = 1004,
         NoAvailableElevators = 1005,
-        PassengerCountExceeded = 1006
+        PassengerCountExceeded = 1006,
+        InvalidElevatorType = 1007,
+        ElevatorAccessDenied= 1008
         // Add other error codes as needed
     }
 }
