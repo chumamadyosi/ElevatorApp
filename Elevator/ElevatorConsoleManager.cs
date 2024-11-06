@@ -1,9 +1,6 @@
 ﻿using Application;
 using Domain;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace ElevatorConsole
@@ -15,94 +12,147 @@ namespace ElevatorConsole
 
         public ElevatorConsoleManager(IElevatorControlService elevatorControlService, BuildingSettings settings)
         {
-            _elevatorControlService = elevatorControlService;
+            _elevatorControlService = elevatorControlService ?? throw new ArgumentNullException(nameof(elevatorControlService));
             _totalFloors = settings.TotalFloors;
+
+            // Subscribe to the OnFloorChanged event
+            _elevatorControlService.OnFloorChanged += ElevatorControlService_OnFloorChanged;
         }
 
-        public async Task RunAsync()
+        // Event handler for floor changes
+        private void ElevatorControlService_OnFloorChanged(int currentFloor, Direction direction)
         {
-            Console.WriteLine("Commands: 'call <floor> <passengers>', 'status', 'exit'");
+            // Output the elevator's current floor and direction to the console
+            Console.WriteLine($"Elevator is now at floor {currentFloor}, moving {direction}.");
+        }
 
+        public async Task StartAsync()
+        {
             while (true)
             {
-                Console.Write("> ");
-                var input = await Console.In.ReadLineAsync();
-                if (string.Equals(input?.Trim(), "exit", StringComparison.OrdinalIgnoreCase))
-                    break;
+                Console.WriteLine("Welcome to the Elevator Control System!");
+                Console.WriteLine("1. Request Elevator");
+                Console.WriteLine("2. Get Elevator Status");
+                Console.WriteLine("3. Exit");
+                Console.Write("Select an option: ");
+                var choice = Console.ReadLine();
 
-                HandleCommand(input);
+                switch (choice)
+                {
+                    case "1":
+                        await RequestElevator();
+                        break;
+                    case "2":
+                        await GetElevatorStatus();
+                        break;
+                    case "3":
+                        Console.WriteLine("Exiting the Elevator Control System. Goodbye!");
+                        return;
+                    default:
+                        Console.WriteLine("Invalid option. Please try again.");
+                        break;
+                }
             }
         }
 
-        public void HandleCommand(string input)
+        private async Task RequestElevator()
         {
-            var argsArray = input.Split(' ');
-
-            if (argsArray[0].ToLower() == "call" && argsArray.Length == 3)
+            Console.Write("Enter requested floor (1 - MaxFloor): ");
+            if (!int.TryParse(Console.ReadLine(), out int requestedFloor) || requestedFloor < 1 || requestedFloor > _totalFloors)
             {
-                ProcessCallCommand(argsArray);
+                Console.WriteLine($"Invalid floor number. Please enter a floor between 1 and {_totalFloors}.");
+                return;
             }
-            else if (argsArray[0].ToLower() == "status")
+
+            Console.Write("Enter number of passengers: ");
+            if (!int.TryParse(Console.ReadLine(), out int passengers) || passengers <= 0)
             {
-                DisplayStatus();
+                Console.WriteLine("Invalid number of passengers. Please enter a positive number.");
+                return;
+            }
+
+            Console.Write("Enter requested direction (Up/Down): ");
+            var directionInput = Console.ReadLine();
+            if (!Enum.TryParse<Direction>(directionInput, true, out Direction requestedDirection))
+            {
+                Console.WriteLine("Invalid direction. Please enter 'Up' or 'Down'.");
+                return;
+            }
+
+            // Get the nearest elevator
+            var (elevator, errorCode) = _elevatorControlService.GetNearestElevator(requestedFloor, requestedDirection);
+            if (elevator == null)
+            {
+                Console.WriteLine($"Error: {errorCode}");
+                return;
+            }
+
+            // Request the elevator to move to the requested floor
+            var requestError = await _elevatorControlService.RequestElevatorToFloor(elevator, requestedFloor, passengers);
+            if (requestError.HasValue)
+            {
+                Console.WriteLine($"Error: {requestError}");
+                return;
+            }
+
+            // Wait for the elevator to arrive at the requested floor
+            await WaitForElevatorArrival(elevator, requestedFloor, requestedDirection);
+
+            Console.WriteLine($"Elevator {elevator.Id} has arrived at floor {requestedFloor} with {passengers} passengers.");
+
+            // Ask for the destination floor
+            Console.Write("Enter destination floor (1 - MaxFloor): ");
+            if (!int.TryParse(Console.ReadLine(), out int destinationFloor) || destinationFloor < 1 || destinationFloor > _totalFloors)
+            {
+                Console.WriteLine($"Invalid destination floor. Please enter a floor between 1 and {_totalFloors}.");
+                return;
+            }
+
+            // Move the elevator to the destination floor
+            var moveError = await _elevatorControlService.MoveElevatorToDestinationFloor(elevator, destinationFloor);
+            if (moveError.HasValue)
+            {
+                Console.WriteLine($"Error: {moveError}");
             }
             else
             {
-                Console.WriteLine("Invalid command. Use 'call <floor> <passengers>' or 'status'.");
+                Console.WriteLine($"Elevator {elevator.Id} is now moving to destination floor {destinationFloor}.");
             }
         }
 
-        private void ProcessCallCommand(string[] args)
+        private async Task WaitForElevatorArrival(Elevator elevator, int requestedFloor, Direction requestedDirection)
         {
-            if (int.TryParse(args[1], out int floor) && int.TryParse(args[2], out int passengers))
+            // Wait until the elevator reaches the requested floor
+            while (elevator.CurrentFloor != requestedFloor)
             {
-                if (floor < 1 || floor > _totalFloors)
-                {
-                    Console.WriteLine($"Invalid floor. Please enter a floor between 1 and {_totalFloors}.");
-                    return;
-                }
+                await Task.Delay(500); // Check every 500ms
+            }
+        }
 
-                // Determine the direction based on the requested floor
-                var requestedDirection = floor > 1 ? Direction.Up : Direction.Down;
+        private async Task GetElevatorStatus()
+        {
+            Console.Write("Enter elevator ID: ");
+            if (!int.TryParse(Console.ReadLine(), out int elevatorId))
+            {
+                Console.WriteLine("Invalid elevator ID.");
+                return;
+            }
 
-                var (nearestElevator, errorCode) = _elevatorControlService.GetNearestElevator(floor, requestedDirection);
-
-                // Check if no elevator is available
-                if (errorCode == ErrorCode.NoAvailableElevators)
-                {
-                    ErrorHandler.HandleError(errorCode.Value);
-                    return;
-                }
-
-                // Now proceed to move the elevator
-                var moveErrorCode = _elevatorControlService.MoveToFloor(nearestElevator, floor, passengers);
-
-                // Handle any potential move errors
-                if (moveErrorCode != null)
-                {
-                    ErrorHandler.HandleError(moveErrorCode.Value);
-                }
+            var (status, errorCode) = _elevatorControlService.GetElevatorStatusById(elevatorId);
+            if (errorCode.HasValue)
+            {
+                Console.WriteLine($"Error: {errorCode}");
             }
             else
             {
-                Console.WriteLine("Invalid input. Use the format 'call <floor> <passengers>'.");
+                Console.WriteLine(status);
             }
         }
 
-        private void DisplayStatus()
+        // Optionally, unsubscribe from the event when done (e.g., in Dispose method)
+        public void Dispose()
         {
-            for (int i = 1; i <= _elevatorControlService.ElevatorCount; i++)
-            {
-                var (status, errorCode) = _elevatorControlService.GetElevatorStatusById(i);
-                if (errorCode == null)
-                {
-                    Console.WriteLine(status);
-                }
-                else
-                {
-                    ErrorHandler.HandleError(errorCode.Value);
-                }
-            }
+            _elevatorControlService.OnFloorChanged -= ElevatorControlService_OnFloorChanged;
         }
     }
 }

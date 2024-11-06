@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace ElevatorApp
@@ -16,7 +17,7 @@ namespace ElevatorApp
             using var host = CreateHostBuilder(args).Build();
             var consoleManager = host.Services.GetRequiredService<ElevatorConsoleManager>();
 
-            await consoleManager.RunAsync();
+            await consoleManager.StartAsync();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
@@ -35,15 +36,18 @@ namespace ElevatorApp
                     services.AddSingleton(serviceProvider =>
                     {
                         var settings = serviceProvider.GetRequiredService<BuildingSettings>();
-                        var elevators = new List<IElevator>();
+                        var elevators = new List<Elevator>();
 
                         foreach (var config in settings.ElevatorSettings.Elevators)
                         {
-                            elevators.Add(new Elevator(config.Id)
+                            var elevator = new Elevator
                             {
+                                Id = config.Id,
                                 MaxFloor = config.MaxFloor,
                                 MaxPassengerCount = config.MaxPassengerCount
-                            });
+                            };
+                            elevators.Add(elevator);
+
                         }
 
                         return elevators;

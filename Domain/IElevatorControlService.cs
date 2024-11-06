@@ -8,9 +8,20 @@ namespace Domain
 {
     public interface IElevatorControlService
     {
-        (IElevator? elevator, ErrorCode? errorCode) GetNearestElevator(int requestedFloor, Direction requestedDirection);
-        ErrorCode? MoveToFloor(IElevator elevator, int floor, int passengers);
+        (Elevator? elevator, ErrorCode? errorCode) GetNearestElevator(int requestedFloor, Direction requestedDirection);
+        // Request elevator to a specific floor and load passengers
+        Task<ErrorCode?> RequestElevatorToFloor(Elevator elevator, int requestedFloor, int passengers);
+
+        // Move elevator to the destination floor
+        Task<ErrorCode?> MoveElevatorToDestinationFloor(Elevator elevator, int destinationFloor);
+
+        // Get elevator status by its ID
         (string status, ErrorCode? errorCode) GetElevatorStatusById(int elevatorId);
-        int ElevatorCount { get; }
+        // Elevator operation methods
+        Task<ErrorCode?> MoveToFloorAsync(Elevator elevator, int floor);
+        Task<ErrorCode?> LoadPassengersAsync(Elevator elevator, int count);
+        bool AddPassengers(Elevator elevator, int count);
+        // Event for floor change notifications
+        event Action<int, Direction> OnFloorChanged;
     }
 }
