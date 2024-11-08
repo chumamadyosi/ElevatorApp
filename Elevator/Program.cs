@@ -29,7 +29,7 @@ namespace ElevatorApp
                     services.AddSingleton(buildingSettings);
 
                     // Register the elevator control service and console manager
-                    services.AddScoped<IElevatorControlService, ElevatorControlService>();
+                    services.AddScoped<IElevatorStatusService, ElevatorStatusService>();
                     services.AddSingleton<ElevatorConsoleManager>();
 
                     // Register and configure elevators based on settings

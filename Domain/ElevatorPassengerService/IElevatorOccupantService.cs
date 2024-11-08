@@ -9,6 +9,6 @@ namespace Domain.ElevatorPassengerService
     public interface IElevatorOccupantService
     {
         Task<ErrorCode?> LoadOccupantsAsync(Elevator elevator, int count, OccupantType occupantType); //count can be passagers or weight this means we round off weight(up for discussion and decimals might not matter that much)
-        bool AddOccupants(Elevator elevator, int count, OccupantType occupantType);
+        Task<bool> AddOccupants(Elevator elevator, int count, OccupantType occupantType);
     }
 }

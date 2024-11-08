@@ -14,7 +14,7 @@ namespace Domain.ElevatorAccessControlService
         Guid.Parse("2a47955e-7556-4a7e-a6a3-54c9ed5d3e28")  // Another authorized user GUID
     };
 
-        public async Task<(ErrorCode? erroCode, bool hasAccess)> AuthorizeUser(Guid userId)
+        public async Task<(ErrorCode? errorCode, bool hasAccess)> AuthorizeUser(Guid userId)
         {
             await Task.Delay(1000);
 

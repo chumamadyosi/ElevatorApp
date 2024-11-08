@@ -37,7 +37,7 @@ namespace Domain.ElevatorPassengerService
         }
 
         // Add occupants (non-async version)
-        public bool AddOccupants(Elevator elevator, int count, OccupantType occupantType)
+        public async Task<bool> AddOccupants(Elevator elevator, int count, OccupantType occupantType)
         {
             switch (occupantType)
             {

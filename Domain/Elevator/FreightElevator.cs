@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Domain.Elevator
+namespace Domain
 {
     public class FreightElevator : IElevator
     {
@@ -29,34 +29,34 @@ namespace Domain.Elevator
         // Overriding the method from IElevatorDispatchService
 
 
-        public (Elevator? elevator, ErrorCode? errorCode) GetNearestElevator(int requestedFloor, Direction requestedDirection, ElevatorType elevatorType = ElevatorType.Freight)
+        public async Task<(Elevator? elevator, ErrorCode? errorCode)> GetNearestElevator(int requestedFloor, Direction requestedDirection, ElevatorType elevatorType = ElevatorType.Freight)
         {
-            return _dispatchService.GetNearestElevator(requestedFloor, requestedDirection, elevatorType);
+            return await _dispatchService.GetNearestElevator(requestedFloor, requestedDirection, elevatorType);
         }
 
-        public Task<ErrorCode?> RequestElevatorToFloor(Elevator elevator, int requestedFloor, ElevatorType elevatorType = ElevatorType.Freight)
+        public async Task<ErrorCode?> RequestElevatorToFloor(Elevator elevator, int requestedFloor, ElevatorType elevatorType = ElevatorType.Freight)
         {
-            return _dispatchService.RequestElevatorToFloor(elevator, requestedFloor, elevatorType);
+            return await _dispatchService.RequestElevatorToFloor(elevator, requestedFloor, elevatorType);
         }
 
-        public Task<ErrorCode?> MoveElevatorToDestinationFloor(Elevator elevator, int destinationFloor)
+        public async Task<ErrorCode?> MoveElevatorToDestinationFloor(Elevator elevator, int destinationFloor)
         {
-            return _movementService.MoveElevatorToDestinationFloor(elevator, destinationFloor);
+            return await _movementService.MoveElevatorToDestinationFloor(elevator, destinationFloor);
         }
 
-        public Task<ErrorCode?> LoadOccupantsAsync(Elevator elevator, int count, OccupantType occupantType = OccupantType.Cargo)
+        public async Task<ErrorCode?> LoadOccupantsAsync(Elevator elevator, int count, OccupantType occupantType = OccupantType.Cargo)
         {
-            return _occupantService.LoadOccupantsAsync(elevator, count, occupantType);
+            return await _occupantService.LoadOccupantsAsync(elevator, count, occupantType);
         }
 
-        public bool AddOccupants(Elevator elevator, int count, OccupantType occupantType = OccupantType.Cargo)
+        public async Task<bool> AddOccupants(Elevator elevator, int count, OccupantType occupantType = OccupantType.Cargo)
         {
-            return _occupantService.AddOccupants(elevator, count, occupantType);
+            return await _occupantService.AddOccupants(elevator, count, occupantType);
         }
 
-        public Task<ErrorCode?> MoveToFloorAsync(Elevator elevator, int floor)
+        public async Task<ErrorCode?> MoveToFloorAsync(Elevator elevator, int floor)
         {
-            return _movementService.MoveToFloorAsync(elevator, floor);
+            return await _movementService.MoveToFloorAsync(elevator, floor);
         }
     }
 }

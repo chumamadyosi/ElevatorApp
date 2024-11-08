@@ -23,22 +23,26 @@ namespace Domain.ElevatorDispatch
             _elevatorPassengerService = elevatorPassengerService ?? throw new ArgumentNullException(nameof(elevatorPassengerService));
         }
 
-        public (Elevator? elevator, ErrorCode? errorCode) GetNearestElevator(int requestedFloor, Direction requestedDirection, ElevatorType elevatorType)
+        public async Task<(Elevator? elevator, ErrorCode? errorCode)> GetNearestElevator(int requestedFloor, Direction requestedDirection, ElevatorType elevatorType)
         {
             if (!_elevators.Any())
                 return (null, ErrorCode.NoAvailableElevators);
 
-            var candidateElevators = _elevators
-                .Where(e => e.Type == elevatorType &&
-                            e.Direction == Direction.Stationary ||
-                            e.Direction == requestedDirection &&
-                             (requestedDirection == Direction.Up && e.CurrentFloor <= requestedFloor ||
-                              requestedDirection == Direction.Down && e.CurrentFloor >= requestedFloor))
-                .ToList();
+            // Filter elevators based on type, direction, and current floor asynchronously
+            var candidateElevators = await Task.Run(() =>
+                _elevators
+                    .Where(e => e.Type == elevatorType &&
+                                (e.Direction == Direction.Stationary ||
+                                 e.Direction == requestedDirection &&
+                                 ((requestedDirection == Direction.Up && e.CurrentFloor <= requestedFloor) ||
+                                  (requestedDirection == Direction.Down && e.CurrentFloor >= requestedFloor))))
+                    .ToList()
+            );
 
             if (!candidateElevators.Any())
                 return (null, ErrorCode.NoAvailableElevators);
 
+            // Find the nearest elevator based on the absolute distance to the requested floor
             var nearestElevator = candidateElevators
                 .OrderBy(e => Math.Abs(e.CurrentFloor - requestedFloor))
                 .FirstOrDefault();

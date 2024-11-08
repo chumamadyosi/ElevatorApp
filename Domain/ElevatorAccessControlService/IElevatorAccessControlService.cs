@@ -8,6 +8,6 @@ namespace Domain.ElevatorAccessControlService
 {
     public interface IElevatorAccessControlService
     {
-        Task< (ErrorCode? erroCode, bool hasAccess)> AuthorizeUser(Guid userId);
+        Task< (ErrorCode? errorCode, bool hasAccess)> AuthorizeUser(Guid userId);
     }
 }
