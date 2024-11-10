@@ -12,30 +12,27 @@ using System.Threading.Tasks;
 
 namespace Application
 {
-    public class ElevatorFactory
+    public class ElevatorControlFactory : IElevatorControlFactory
     {
-        private readonly ElevatorDispatchService _dispatchService;
-        private readonly IElevatorMovementService _movementService;
-        private readonly IElevatorOccupantService _occupantService;
-        private readonly IElevatorAccessControlService _accessControlService;
 
-        public ElevatorFactory(ElevatorDispatchService dispatchService, IElevatorMovementService movementService, IElevatorOccupantService occupantService, IElevatorAccessControlService accessControlService)
+        private readonly IElevatorOccupantService _occupantService;
+
+
+        public ElevatorControlFactory(IElevatorOccupantService occupantService)
         {
-            _dispatchService = dispatchService;
-            _movementService = movementService;
             _occupantService = occupantService;
-            _accessControlService = accessControlService;
+      
         }
-        public IElevator CreateElevator(ElevatorType elevatorType)
+        public IElevator CreateElevatorControlService(ElevatorType elevatorType)
         {
             switch (elevatorType)
             {
                 case ElevatorType.Passenger:
-                    return new PassengerElevator(_dispatchService, _movementService, _occupantService);
+                    return new PassengerElevator();
                 case ElevatorType.Freight:
-                    return new FreightElevator(_dispatchService, _movementService, _occupantService);
+                    return new FreightElevator();
                 case ElevatorType.Glass:
-                    return new GlassElevator(_dispatchService, _movementService, _occupantService, _accessControlService);
+                    return new GlassElevator(_occupantService);
                 default:
                     throw new ArgumentException("Invalid elevator type");
             }

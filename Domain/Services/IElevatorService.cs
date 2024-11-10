@@ -1,6 +1,5 @@
 ﻿using Domain.ElevatorDispatch;
 using Domain.ElevatorMovementService;
-using Domain.ElevatorPassengerService;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Domain
 {
-    public interface IElevator : IElevatorDispatchService, IElevatorMovementService, IElevatorOccupantService
+    public interface IElevatorService : IElevatorDispatchService, IElevatorMovementService, IElevatorStatusService
     {
         // You could add common elevator-related properties here if needed.
     }

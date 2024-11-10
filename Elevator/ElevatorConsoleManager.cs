@@ -8,13 +8,23 @@ namespace ElevatorConsole
     public class ElevatorConsoleManager
     {
         private readonly IElevatorControlFactory _elevatorFactory;
-        private readonly int _totalFloors;
 
-        public ElevatorConsoleManager(IElevatorControlFactory elevatorFactory, BuildingSettings settings)
+        private readonly int _totalFloors;
+        private readonly List<Elevator> _elevators;
+        private readonly IElevatorService _elevatorService;
+
+        public ElevatorConsoleManager(IElevatorControlFactory elevatorFactory, BuildingSettings settings, List<Elevator> elevators, IElevatorService elevatorService)
         {
             _elevatorFactory = elevatorFactory ?? throw new ArgumentNullException(nameof(elevatorFactory));
             _totalFloors = settings.TotalFloors;
+            _elevators = elevators ?? throw new ArgumentNullException(nameof(elevators));
+            _elevatorService = elevatorService;
         }
+
+        //public async Task StartAsync()
+        //{
+        //    // Use _elevators here as needed
+        //}
 
         public async Task StartAsync()
         {
@@ -22,8 +32,9 @@ namespace ElevatorConsole
             {
                 Console.WriteLine("Welcome to the Elevator Control System!");
                 Console.WriteLine("1. Request Elevator");
-                Console.WriteLine("2. Get Elevator Status");
-                Console.WriteLine("3. Exit");
+                Console.WriteLine("2. Get Specific Elevator Status");
+                Console.WriteLine("3. Display Real-Time Elevator Status");
+                Console.WriteLine("4. Exit");
                 Console.Write("Select an option: ");
                 var choice = Console.ReadLine();
 
@@ -33,9 +44,12 @@ namespace ElevatorConsole
                         await RequestElevator();
                         break;
                     case "2":
-                        await GetElevatorStatus();
+                        await GetSpecificElevatorStatus();
                         break;
                     case "3":
+                        await DisplayRealTimeElevatorStatus();
+                        break;
+                    case "4":
                         Console.WriteLine("Exiting the Elevator Control System. Goodbye!");
                         return;
                     default:
@@ -44,6 +58,7 @@ namespace ElevatorConsole
                 }
             }
         }
+
 
         private async Task RequestElevator()
         {
@@ -54,7 +69,7 @@ namespace ElevatorConsole
                 return;
             }
 
-            Console.WriteLine("Enter the requested direction (Up/Down):");//this should be a button i real life if you are on floor 3 goung up you press up
+            Console.WriteLine("Enter the requested direction (Up/Down):");//this should be a button in real life if you are on floor 3 going up you press up
             var directionInput = Console.ReadLine()?.Trim().ToLower();
             if (directionInput != "up" && directionInput != "down")
             {
@@ -87,7 +102,7 @@ namespace ElevatorConsole
 
             // Get the nearest elevator
 
-            var (elevator, errorCode) = await elevatorFactory.GetNearestElevator(requestedFloor, requestedDirection, ElevatorType.Passenger);
+            var (elevator, errorCode) = await _elevatorService.GetNearestElevator(requestedFloor, requestedDirection, ElevatorType.Passenger);
             if (elevator == null)
             {
                 Console.WriteLine($"Error: {errorCode}");
@@ -98,7 +113,7 @@ namespace ElevatorConsole
 
 
             // Validate and load passengers using the ElevatorOccupantService
-            var loadError = await elevatorFactory.LoadOccupantsAsync(elevator, passengerCountOrLoadCapacity, ocupantType);
+            var loadError = await elevatorFactory.LoadOccupants(elevator, passengerCountOrLoadCapacity);
             if (loadError.HasValue)
             {
                 //log with error code saying capacity
@@ -106,7 +121,7 @@ namespace ElevatorConsole
             }
 
             // Request the elevator to move to the requested floor
-            var requestError = await elevatorFactory.RequestElevatorToFloor(elevator, requestedFloor, elevatorType);
+            var requestError = await _elevatorService.RequestElevatorToFloor(elevator, requestedFloor);
             if (requestError.HasValue)
             {
                 Console.WriteLine($"Error: {requestError}");
@@ -126,10 +141,10 @@ namespace ElevatorConsole
                 Console.WriteLine($"Invalid destination floor. Please enter a floor between 1 and {_totalFloors}.");
                 return;
             }
-            var tryAddOccupants = await elevatorFactory.AddOccupants(elevator, passengerCountOrLoadCapacity, ocupantType);
-            if(tryAddOccupants)
+            var tryAddOccupants = await elevatorFactory.AddOccupants(elevator, passengerCountOrLoadCapacity);
+            if (tryAddOccupants)
             { // Move the elevator to the destination floor
-                var moveError = await elevatorFactory.MoveElevatorToDestinationFloor(elevator, destinationFloor);
+                var moveError = await _elevatorService.MoveElevatorToDestinationFloor(elevator, destinationFloor);
             }
             else
             {
@@ -147,18 +162,16 @@ namespace ElevatorConsole
             }
         }
 
-        private async Task GetElevatorStatus()
+        private async Task GetSpecificElevatorStatus()
         {
             Console.Write("Enter elevator ID: ");
-            if (!int.TryParse(Console.ReadLine(), out int elevatorId))
+            if (!ulong.TryParse(Console.ReadLine(), out ulong elevatorId))
             {
                 Console.WriteLine("Invalid elevator ID.");
                 return;
             }
 
-            var elevatorFactory = _elevatorFactory.CreateElevator(ElevatorType.Passenger);  // Create an elevator instance
-
-            var(elevatorFactory.status, errorCode) = await elevatorFactory.GetElevatorStatusById(elevatorId);
+            var (status, errorCode) = _elevatorService.GetElevatorStatusById(elevatorId);
             if (errorCode.HasValue)
             {
                 Console.WriteLine($"Error: {errorCode}");
@@ -166,6 +179,34 @@ namespace ElevatorConsole
             else
             {
                 Console.WriteLine(status);
+            }
+        }
+        private async Task DisplayRealTimeElevatorStatus()
+        {
+            Console.WriteLine("Press 'Q' at any time to stop real-time status display.");
+            while (true)
+            {
+                if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Q)
+                {
+                    Console.WriteLine("Real-time status display stopped.");
+                    break;
+                }
+
+                var elevatorStatuses = await _elevatorService.GetElevatorStatuses();
+                Console.Clear();
+                Console.WriteLine("Real-Time Elevator Status:");
+                foreach (var (elevatorId, status, errorCode) in elevatorStatuses)
+                {
+                    if (errorCode.HasValue)
+                    {
+                        Console.WriteLine($"Elevator {elevatorId}: Error - {errorCode}");
+                    }
+                    else
+                    {
+                        Console.WriteLine(status);
+                    }
+                }
+                await Task.Delay(1000); // Update status every second
             }
         }
     }

@@ -31,7 +31,7 @@ namespace Domain.ElevatorDispatch
             // Filter elevators based on type, direction, and current floor asynchronously
             var candidateElevators = await Task.Run(() =>
                 _elevators
-                    .Where(e => e.Type == elevatorType &&
+                    .Where(e => e.ElevatorType == elevatorType &&
                                 (e.Direction == Direction.Stationary ||
                                  e.Direction == requestedDirection &&
                                  ((requestedDirection == Direction.Up && e.CurrentFloor <= requestedFloor) ||
@@ -51,7 +51,7 @@ namespace Domain.ElevatorDispatch
         }
 
         // Request elevator to a specific floor and load passengers
-        public async Task<ErrorCode?> RequestElevatorToFloor(Elevator elevator, int requestedFloor, ElevatorType elevatorType)
+        public async Task<ErrorCode?> RequestElevatorToFloor(Elevator elevator, int requestedFloor)
         {
             if (elevator == null)
                 return ErrorCode.NullElevator;
@@ -59,10 +59,6 @@ namespace Domain.ElevatorDispatch
             // Validate the requested floor
             if (requestedFloor < 1 || requestedFloor > elevator.MaxFloor)
                 return ErrorCode.FloorOutOfRange;
-
-            // Check if the elevator's type matches the requested type
-            if (elevator.Type != elevatorType)
-                return ErrorCode.InvalidElevatorType;
 
             // If the elevator is already at the requested floor, no need to move
             if (elevator.CurrentFloor == requestedFloor)

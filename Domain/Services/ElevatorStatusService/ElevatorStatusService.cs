@@ -16,7 +16,7 @@ namespace Domain
         }
 
         // Get elevator status by its ID
-        public (string status, ErrorCode? errorCode) GetElevatorStatusById(int elevatorId)
+        public (string status, ErrorCode? errorCode) GetElevatorStatusById(ulong elevatorId)
         {
             var elevator = _elevators.FirstOrDefault(e => e.Id == elevatorId);
             if (elevator == null)
@@ -27,7 +27,7 @@ namespace Domain
         }
 
         // Get statuses of all elevators in bulk
-        public async Task<List<(int elevatorId, string status, ErrorCode? errorCode)>> GetElevatorStatuses()
+        public async Task<List<(ulong elevatorId, string status, ErrorCode? errorCode)>> GetElevatorStatuses()
         {
             return await Task.Run(() =>
                 _elevators.Select(elevator =>

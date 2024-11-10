@@ -8,6 +8,6 @@ namespace Domain.ElevatorDispatch
 {
     public interface IDispatchElevatorWithUserAccess
     {
-        Task<(Elevator? elevator, ErrorCode? errorCode)> GetNearestElevatorWithUserAccess(int requestedFloor, Direction requestedDirection, ElevatorType elevatorType = ElevatorType.Passenger, Guid userId);
+        Task<(Elevator? elevator, ErrorCode? errorCode)> GetNearestElevatorWithUserAccess(int requestedFloor, Direction requestedDirection, Guid userId, ElevatorType elevatorType = ElevatorType.Passenger);
     }
 }

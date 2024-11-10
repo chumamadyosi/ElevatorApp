@@ -9,8 +9,6 @@ namespace Application
     public class ElevatorSettings
     {
         public int ElevatorCount { get; set; }
-        public int DefaultMaxPassengerCount { get; set; }
-        public int DefaultMaxFloor { get; set; }
         public List<ElevatorConfig> Elevators { get; set; }
     }
 }
