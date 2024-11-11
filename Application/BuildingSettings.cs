@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace Application
 {
-    public class ElevatorSettings
+    public class BuildingSettings
     {
-        public int ElevatorCount { get; set; }
-        public List<ElevatorConfig> Elevators { get; set; }
+        public int TotalFloors { get; set; }
+        public ElevatorSettings ElevatorSettings { get; set; }
     }
 }

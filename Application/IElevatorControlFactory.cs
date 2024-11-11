@@ -5,11 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Infrastructure
+namespace Application
 {
-    public interface ILogger
+    public interface IElevatorControlFactory
     {
-        void Log(string message);
-        void LogError(string message, ErrorCode errorCode);
+        IElevator CreateElevatorControlService(ElevatorType elevatorType);
     }
 }
