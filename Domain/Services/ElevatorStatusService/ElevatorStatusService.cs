@@ -16,9 +16,11 @@ namespace Domain
         }
 
         // Get elevator status by its ID
-        public (string status, ErrorCode? errorCode) GetElevatorStatusById(ulong elevatorId)
+        public async Task<(string status, ErrorCode? errorCode)> GetElevatorStatusById(ulong elevatorId)
         {
-            var elevator = _elevators.FirstOrDefault(e => e.Id == elevatorId);
+            // Since the operation is CPU-bound (in-memory list search), we use Task.FromResult instead of Task.Run
+            var elevator = await Task.FromResult(_elevators.FirstOrDefault(e => e.Id == elevatorId));
+
             if (elevator == null)
                 return ("", ErrorCode.ElevatorNotFound);
 

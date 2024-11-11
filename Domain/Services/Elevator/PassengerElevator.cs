@@ -12,14 +12,23 @@ namespace Domain
 {
     public class PassengerElevator : IElevator
     {
-        public Task<bool> AddOccupants(Elevator elevator, int count)
+
+        private readonly IElevatorOccupantService _occupantService;
+
+        public PassengerElevator(IElevatorOccupantService occupantService)
         {
-            throw new NotImplementedException();
+            _occupantService = occupantService;
+
         }
 
-        public Task<ErrorCode?> LoadOccupants(Elevator elevator, int count)
+        public async Task<ErrorCode?> LoadOccupants(Elevator elevator, int count)
         {
-            throw new NotImplementedException();
+            return await _occupantService.LoadOccupants(elevator, count);
+        }
+
+        public async Task<bool> AddOccupants(Elevator elevator, int count)
+        {
+            return await _occupantService.AddOccupants(elevator, count);
         }
     }
 

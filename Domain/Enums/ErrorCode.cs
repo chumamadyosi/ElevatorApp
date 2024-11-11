@@ -18,7 +18,10 @@ namespace Domain
         InvalidElevatorType = 1007,
         ElevatorAccessDenied = 1008,
         ExceedsWeightCapacity = 1009,
-        ExceedsCapacity = 1011
+        ExceedsCapacity = 1011,
+        InvalidFloorRequest = 3000,
+        InvalidDirection = 3001,
+        InvalidPassengerCount = 3002
         // Add other error codes as needed
     }
 }

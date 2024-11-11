@@ -33,6 +33,7 @@ namespace Domain.ElevatorMovementService
 
             // Once the elevator reaches the destination floor, set direction to stationary
             elevator.Direction = Direction.Stationary;
+            elevator.PassengerCount = 0;
 
             // Notify stationary state after reaching the destination
             await NotifyAndDelay(elevator.CurrentFloor, elevator.Direction, elevator.SpeedInMillisecondsPerFloor);

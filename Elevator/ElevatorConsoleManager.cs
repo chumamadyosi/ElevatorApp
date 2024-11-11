@@ -1,5 +1,9 @@
 ﻿using Application;
 using Domain;
+using Infrastructure;
+using Microsoft.Extensions.Options;
+using System;
+using System.Threading.Tasks;
 using System;
 using System.Threading.Tasks;
 
@@ -8,23 +12,20 @@ namespace ElevatorConsole
     public class ElevatorConsoleManager
     {
         private readonly IElevatorControlFactory _elevatorFactory;
-
-        private readonly int _totalFloors;
+        private readonly BuildingSettings _settings;
         private readonly List<Elevator> _elevators;
         private readonly IElevatorService _elevatorService;
+        private readonly ErrorHandler _errorHandler;
 
-        public ElevatorConsoleManager(IElevatorControlFactory elevatorFactory, BuildingSettings settings, List<Elevator> elevators, IElevatorService elevatorService)
+        public ElevatorConsoleManager(IElevatorControlFactory elevatorFactory, BuildingSettings settings, List<Elevator> elevators, IElevatorService elevatorService, ErrorHandler errorHandler, IOptions<BuildingSettings> options)
         {
+            _settings = options.Value;
             _elevatorFactory = elevatorFactory ?? throw new ArgumentNullException(nameof(elevatorFactory));
-            _totalFloors = settings.TotalFloors;
+            _settings.TotalFloors = settings.TotalFloors;
             _elevators = elevators ?? throw new ArgumentNullException(nameof(elevators));
             _elevatorService = elevatorService;
+            _errorHandler = errorHandler ?? throw new ArgumentNullException(nameof(errorHandler));
         }
-
-        //public async Task StartAsync()
-        //{
-        //    // Use _elevators here as needed
-        //}
 
         public async Task StartAsync()
         {
@@ -41,10 +42,18 @@ namespace ElevatorConsole
                 switch (choice)
                 {
                     case "1":
-                        await RequestElevator();
+                        var requestError = await RequestElevator();
+                        if (requestError.HasValue)
+                        {
+                            _errorHandler.HandleError(requestError.Value);
+                        }
                         break;
                     case "2":
-                        await GetSpecificElevatorStatus();
+                        var statusError = await GetSpecificElevatorStatus();
+                        if (statusError.HasValue)
+                        {
+                            _errorHandler.HandleError(statusError.Value);
+                        }
                         break;
                     case "3":
                         await DisplayRealTimeElevatorStatus();
@@ -59,128 +68,71 @@ namespace ElevatorConsole
             }
         }
 
-
-        private async Task RequestElevator()
+        private async Task<ErrorCode?> RequestElevator()
         {
-            Console.Write("Enter requested floor: ");//current floor
-            if (!int.TryParse(Console.ReadLine(), out int requestedFloor) || requestedFloor < 1 || requestedFloor > _totalFloors)
+            var elevatorRequest = GetLiftRequest();
+            if (elevatorRequest.ErrorCode != null)
             {
-                Console.WriteLine($"Invalid floor number. Please enter a floor between 1 and {_totalFloors}.");
-                return;
+                return elevatorRequest.ErrorCode;
             }
 
-            Console.WriteLine("Enter the requested direction (Up/Down):");//this should be a button in real life if you are on floor 3 going up you press up
-            var directionInput = Console.ReadLine()?.Trim().ToLower();
-            if (directionInput != "up" && directionInput != "down")
+            var elevatorFactory = _elevatorFactory.CreateElevatorControlService(ElevatorType.Passenger);
+            var (elevator, errorCode) = await _elevatorService.GetNearestElevator(elevatorRequest.RequestedFloor, elevatorRequest.RequestedDirection, ElevatorType.Passenger);
+            if (errorCode.HasValue)
             {
-                Console.WriteLine("Invalid direction. Please enter 'Up' or 'Down'.");
-                return;
+                return errorCode;
             }
 
-            var requestedDirection = directionInput == "up" ? Direction.Up : Direction.Down;
-
-            Console.WriteLine("Please specify the type of elevator (Passenger, Glass, Freight):");
-            var elevatorTypeInput = Console.ReadLine()?.Trim();
-            if (!Enum.TryParse(elevatorTypeInput, true, out ElevatorType elevatorType))
-            {
-                Console.WriteLine("Invalid elevator type. Please enter one of the following: Passenger, Glass, Freight.");
-                return;
-            }
-
-            if (elevatorType == ElevatorType.Freight)
-                Console.Write("Enter load in kgs: ");
-            else
-                Console.Write("Enter number of passengers: ");
-            if (!int.TryParse(Console.ReadLine(), out int passengerCountOrLoadCapacity) || passengerCountOrLoadCapacity <= 0)
-            {
-                Console.WriteLine("Invalid number of passengers. Please enter a positive number.");
-                return;
-            }
-
-            // Use the factory to create an elevator
-            var elevatorFactory = _elevatorFactory.CreateElevatorControlService(ElevatorType.Passenger);  // For example, creating a PassengerElevator
-
-            // Get the nearest elevator
-
-            var (elevator, errorCode) = await _elevatorService.GetNearestElevator(requestedFloor, requestedDirection, ElevatorType.Passenger);
-            if (elevator == null)
-            {
-                Console.WriteLine($"Error: {errorCode}");
-                return;
-            }
-
-            var ocupantType = ElevatorOccupantTypeMapper.GetOccupantTypeForElevator(elevatorType);
-
-
-            // Validate and load passengers using the ElevatorOccupantService
-            var loadError = await elevatorFactory.LoadOccupants(elevator, passengerCountOrLoadCapacity);
+            var loadError = await elevatorFactory.LoadOccupants(elevator, elevatorRequest.PassengerCountOrLoadCapacity);
             if (loadError.HasValue)
             {
-                //log with error code saying capacity
-                return;
+                return loadError;
             }
 
-            // Request the elevator to move to the requested floor
-            var requestError = await _elevatorService.RequestElevatorToFloor(elevator, requestedFloor);
+            var requestError = await _elevatorService.RequestElevatorToFloor(elevator, elevatorRequest.RequestedFloor);
             if (requestError.HasValue)
             {
-                Console.WriteLine($"Error: {requestError}");
-                return;
+                return requestError;
             }
 
-            // Wait for the elevator to arrive at the requested floor
-            await WaitForElevatorArrival(elevator, requestedFloor);
+            await WaitForElevatorArrival(elevator, elevatorRequest.RequestedFloor);
 
-            Console.WriteLine($"Elevator {elevator.Id} has arrived at floor {requestedFloor}.");
+            Console.WriteLine($"Elevator {elevator.Id} has arrived at floor {elevatorRequest.RequestedFloor}.");
 
-
-            // Ask for the destination floor
             Console.Write("Enter destination floor: ");
-            if (!int.TryParse(Console.ReadLine(), out int destinationFloor) || destinationFloor < 1 || destinationFloor > _totalFloors)
+            if (!int.TryParse(Console.ReadLine(), out int destinationFloor) || destinationFloor < 1 || destinationFloor > _settings.TotalFloors)
             {
-                Console.WriteLine($"Invalid destination floor. Please enter a floor between 1 and {_totalFloors}.");
-                return;
+                return ErrorCode.InvalidFloorRequest;
             }
-            var tryAddOccupants = await elevatorFactory.AddOccupants(elevator, passengerCountOrLoadCapacity);
-            if (tryAddOccupants)
-            { // Move the elevator to the destination floor
-                var moveError = await _elevatorService.MoveElevatorToDestinationFloor(elevator, destinationFloor);
-            }
-            else
+
+            var moveError = await _elevatorService.MoveElevatorToDestinationFloor(elevator, destinationFloor);
+            if (moveError.HasValue)
             {
-                Console.WriteLine($"Elevator {elevator.Id} is now moving to destination floor {destinationFloor}.");
-                return;
+                return moveError;
             }
+
+            Console.WriteLine($"Elevator {elevator.Id} is now moving to destination floor {destinationFloor}.");
+            return null;
         }
 
-        private async Task WaitForElevatorArrival(Elevator elevator, int requestedFloor)
-        {
-            // Wait until the elevator reaches the requested floor
-            while (elevator.CurrentFloor != requestedFloor)
-            {
-                await Task.Delay(500); // Check every 500ms
-            }
-        }
-
-        private async Task GetSpecificElevatorStatus()
+        private async Task<ErrorCode?> GetSpecificElevatorStatus()
         {
             Console.Write("Enter elevator ID: ");
             if (!ulong.TryParse(Console.ReadLine(), out ulong elevatorId))
             {
-                Console.WriteLine("Invalid elevator ID.");
-                return;
+                return ErrorCode.InvalidElevatorType;
             }
 
-            var (status, errorCode) = _elevatorService.GetElevatorStatusById(elevatorId);
+            var (status, errorCode) = await _elevatorService.GetElevatorStatusById(elevatorId);
             if (errorCode.HasValue)
             {
-                Console.WriteLine($"Error: {errorCode}");
+                return errorCode;
             }
-            else
-            {
-                Console.WriteLine(status);
-            }
+
+            Console.WriteLine(status);
+            return null;
         }
+
         private async Task DisplayRealTimeElevatorStatus()
         {
             Console.WriteLine("Press 'Q' at any time to stop real-time status display.");
@@ -199,7 +151,7 @@ namespace ElevatorConsole
                 {
                     if (errorCode.HasValue)
                     {
-                        Console.WriteLine($"Elevator {elevatorId}: Error - {errorCode}");
+                        _errorHandler.HandleError(errorCode.Value);
                     }
                     else
                     {
@@ -209,5 +161,55 @@ namespace ElevatorConsole
                 await Task.Delay(1000); // Update status every second
             }
         }
+
+        public ElevatorRequest GetLiftRequest() //press button up/down
+        {
+            var liftRequest = new ElevatorRequest();
+
+            Console.Write("Enter current floor: ");
+            if (!int.TryParse(Console.ReadLine(), out int requestedFloor) || requestedFloor < 1 || requestedFloor > _settings.TotalFloors)
+            {
+                return new ElevatorRequest { ErrorCode = ErrorCode.InvalidFloorRequest };
+            }
+            liftRequest.RequestedFloor = requestedFloor;
+
+            Console.WriteLine("Enter the requested direction (Up/Down):");
+            var directionInput = Console.ReadLine()?.Trim().ToLower();
+            if (directionInput != "up" && directionInput != "down")
+            {
+                return new ElevatorRequest { ErrorCode = ErrorCode.InvalidDirection };
+            }
+            liftRequest.RequestedDirection = directionInput == "up" ? Direction.Up : Direction.Down;
+
+            Console.WriteLine("Please specify the type of elevator (Passenger, Glass, Freight):");
+            var elevatorTypeInput = Console.ReadLine()?.Trim();
+            if (!Enum.TryParse(elevatorTypeInput, true, out ElevatorType elevatorType))
+            {
+                return new ElevatorRequest { ErrorCode = ErrorCode.InvalidElevatorType };
+            }
+            liftRequest.ElevatorType = elevatorType;
+
+            if (elevatorType == ElevatorType.Freight)
+                Console.Write("Enter load in kgs: ");
+            else
+                Console.Write("Enter number of passengers: ");
+            if (!int.TryParse(Console.ReadLine(), out int passengerCountOrLoadCapacity) || passengerCountOrLoadCapacity <= 0)
+            {
+                return new ElevatorRequest { ErrorCode = ErrorCode.InvalidPassengerCount };
+            }
+            liftRequest.PassengerCountOrLoadCapacity = passengerCountOrLoadCapacity;
+
+            return liftRequest;
+        }
+
+        private async Task WaitForElevatorArrival(Elevator elevator, int requestedFloor)
+        {
+            while (elevator.CurrentFloor != requestedFloor)
+            {
+                await Task.Delay(500);
+            }
+        }
     }
 }
+
+

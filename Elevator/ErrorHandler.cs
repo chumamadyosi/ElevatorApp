@@ -27,10 +27,13 @@ namespace ElevatorConsole
                 ErrorCode.NullElevator => "The elevator cannot be null.",
                 ErrorCode.NoAvailableElevators => "There are no available elevators.",
                 ErrorCode.PassengerCountExceeded => "Passenger count exceeded the limit.",
-                ErrorCode.InvalidElevatorType => "The elevator type is invalid.",
+                ErrorCode.InvalidElevatorType => "The elevator type is invalid. Types (Passenger, Frieght, Glass)",
                 ErrorCode.ElevatorAccessDenied => "Elevator access is denied.",
                 ErrorCode.ExceedsWeightCapacity => "The weight capacity has been exceeded.",
                 ErrorCode.ExceedsCapacity => "The elevator exceeds its capacity.",
+                ErrorCode.InvalidFloorRequest => "Invalid floor number",
+                ErrorCode.InvalidDirection=> "Invalid direction. Please enter 'Up' or 'Down",
+                ErrorCode.InvalidPassengerCount => "Invalid number of passengers. Please enter a positive number.",
                 _ => "An unknown error occurred."
             };
 

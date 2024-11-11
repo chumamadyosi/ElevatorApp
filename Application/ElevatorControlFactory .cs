@@ -28,7 +28,7 @@ namespace Application
             switch (elevatorType)
             {
                 case ElevatorType.Passenger:
-                    return new PassengerElevator();
+                    return new PassengerElevator(_occupantService);
                 case ElevatorType.Freight:
                     return new FreightElevator();
                 case ElevatorType.Glass:

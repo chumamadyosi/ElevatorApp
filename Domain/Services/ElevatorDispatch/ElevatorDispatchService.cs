@@ -12,15 +12,11 @@ namespace Domain.ElevatorDispatch
     {
         private readonly List<Elevator> _elevators;
         private readonly IElevatorMovementService _elevatorMovementService;
-        private readonly IElevatorOccupantService _elevatorPassengerService;
 
-        public ElevatorDispatchService(List<Elevator> elevators,
-        IElevatorMovementService elevatorMovementService,
-        IElevatorOccupantService elevatorPassengerService)
+        public ElevatorDispatchService(List<Elevator> elevators, IElevatorMovementService elevatorMovementService)
         {
             _elevators = elevators ?? throw new ArgumentNullException(nameof(elevators));
             _elevatorMovementService = elevatorMovementService ?? throw new ArgumentNullException(nameof(elevatorMovementService));
-            _elevatorPassengerService = elevatorPassengerService ?? throw new ArgumentNullException(nameof(elevatorPassengerService));
         }
 
         public async Task<(Elevator? elevator, ErrorCode? errorCode)> GetNearestElevator(int requestedFloor, Direction requestedDirection, ElevatorType elevatorType)

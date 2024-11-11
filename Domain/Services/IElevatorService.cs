@@ -12,4 +12,5 @@ namespace Domain
     {
         // You could add common elevator-related properties here if needed.
     }
+   
 }
