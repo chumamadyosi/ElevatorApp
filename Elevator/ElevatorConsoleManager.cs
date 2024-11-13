@@ -1,5 +1,4 @@
-﻿// Import necessary namespaces for various application layers and configurations
-using Application;
+﻿using Application;
 using Domain;
 using Infrastructure;
 using Microsoft.Extensions.Options;
@@ -8,22 +7,18 @@ using System.Threading.Tasks;
 
 namespace ElevatorConsole
 {
-    public class ElevatorConsoleManager
+    public class ElevatorConsoleManager : IElevatorConsoleManager
     {
-        // Private fields to hold service dependencies and settings
         private readonly IElevatorControlFactory _elevatorFactory;
         private readonly BuildingSettings _settings;
-        private readonly List<Elevator> _elevators;
         private readonly IElevatorService _elevatorService;
         private readonly ErrorHandler _errorHandler;
 
-        // Constructor to initialize the ElevatorConsoleManager with dependencies and settings
-        public ElevatorConsoleManager(IElevatorControlFactory elevatorFactory, BuildingSettings settings, List<Elevator> elevators, IElevatorService elevatorService, ErrorHandler errorHandler, IOptions<BuildingSettings> options)
+        public ElevatorConsoleManager(IElevatorControlFactory elevatorFactory, BuildingSettings settings, IElevatorService elevatorService, ErrorHandler errorHandler, IOptions<BuildingSettings> options)
         {
-            _settings = options.Value; // Retrieve building settings from options
+            _settings = options.Value;
             _elevatorFactory = elevatorFactory ?? throw new ArgumentNullException(nameof(elevatorFactory));
-            _settings.TotalFloors = settings.TotalFloors; // Set total floors from settings
-            _elevators = elevators ?? throw new ArgumentNullException(nameof(elevators));
+            _settings.TotalFloors = settings.TotalFloors;
             _elevatorService = elevatorService;
             _errorHandler = errorHandler ?? throw new ArgumentNullException(nameof(errorHandler));
         }
@@ -76,7 +71,7 @@ namespace ElevatorConsole
         }
 
         // Requests an elevator and manages various steps of the process
-        private async Task<ErrorCode?> RequestElevator()
+        public async Task<ErrorCode?> RequestElevator()
         {
             var elevatorRequest = GetLiftRequest(); // Get lift request details from user
             if (elevatorRequest.ErrorCode != null)
@@ -84,15 +79,15 @@ namespace ElevatorConsole
                 return elevatorRequest.ErrorCode;
             }
 
-            // Obtain the elevator control service for the requested elevator type
             var elevatorFactory = _elevatorFactory.CreateElevatorControlService(ElevatorType.Passenger);
+
             var (elevator, errorCode) = await _elevatorService.GetNearestElevator(elevatorRequest.RequestedFloor, elevatorRequest.RequestedDirection, ElevatorType.Passenger);
             if (errorCode.HasValue)
             {
                 return errorCode;
             }
 
-            // Load occupants or freight into the elevator
+            // Load occupants or freight into the elevator, Method to check if it is safe to load passengers before requesting
             var loadError = await elevatorFactory.LoadOccupants(elevator, elevatorRequest.PassengerCountOrLoadCapacity);
             if (loadError.HasValue)
             {
@@ -118,19 +113,27 @@ namespace ElevatorConsole
                 return ErrorCode.InvalidFloorRequest;
             }
 
-            // Move the elevator to the destination floor and report any error
-            var moveError = await _elevatorService.MoveElevatorToDestinationFloor(elevator, destinationFloor);
-            if (moveError.HasValue)
+
+            // Add the passengers once the elevator has arrived at the requested floor
+            var addOccupants = await elevatorFactory.AddOccupants(elevator, elevatorRequest.PassengerCountOrLoadCapacity);
+            if (!addOccupants)
             {
-                return moveError;
+                return ErrorCode.ExceedsCapacity; // Return error that occurs when adding passengers after arrival
             }
 
+
+            // Move the elevator to the destination floor and report any error
             Console.WriteLine($"Elevator {elevator.Id} is now moving to destination floor {destinationFloor}.");
+
+            var _ = _elevatorService.MoveElevatorToDestinationFloor(elevator, destinationFloor);
+
+
+
             return null;
         }
 
         // Retrieves the status of a specific elevator by ID
-        private async Task<ErrorCode?> GetSpecificElevatorStatus()
+        public async Task<ErrorCode?> GetSpecificElevatorStatus()
         {
             Console.Write("Enter elevator ID: ");
             if (!ulong.TryParse(Console.ReadLine(), out ulong elevatorId))
@@ -138,7 +141,7 @@ namespace ElevatorConsole
                 return ErrorCode.InvalidElevatorType;
             }
 
-            // Get elevator status and handle any error
+
             var (status, errorCode) = await _elevatorService.GetElevatorStatusById(elevatorId);
             if (errorCode.HasValue)
             {
@@ -150,11 +153,12 @@ namespace ElevatorConsole
         }
 
         // Continuously displays real-time status of all elevators until stopped by user
-        private async Task DisplayRealTimeElevatorStatus()
+        public async Task DisplayRealTimeElevatorStatus()
         {
-            Console.WriteLine("Press 'Q' at any time to stop real-time status display.");
+
             while (true)
             {
+                Console.WriteLine("Press 'Q' at any time to stop real-time status display.");
                 if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Q)
                 {
                     Console.WriteLine("Real-time status display stopped.");
@@ -176,7 +180,7 @@ namespace ElevatorConsole
                         Console.WriteLine(status);
                     }
                 }
-                await Task.Delay(1000); // Update status every second
+                await Task.Delay(1000); 
             }
         }
 

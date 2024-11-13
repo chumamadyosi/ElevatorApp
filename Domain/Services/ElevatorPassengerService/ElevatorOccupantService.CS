@@ -5,35 +5,29 @@ namespace Domain.ElevatorPassengerService
 {
     public class ElevatorOccupantService : IElevatorOccupantService
     {
-        // Method to load passengers asynchronously
+        // Method to check if it is safe to load passengers
         public async Task<ErrorCode?> LoadOccupants(Elevator elevator, int count)
         {
             if (count < 0)
-                return ErrorCode.ExceedsCapacity; // Handle negative count for invalid input
+                return ErrorCode.ExceedsCapacity; 
 
-            // Check if adding passengers exceeds the maximum allowed passenger count
+ 
             if (elevator.PassengerCount + count > elevator.MaxPassengerCount)
                 return ErrorCode.ExceedsPassengerCapacity;
 
-            elevator.PassengerCount += count; // Add passengers to elevator
-            return null; // Successfully loaded passengers
+            return null; 
         }
 
-        // Non-async method to add passengers
+        // Method to add passengers after validating that it's safe
         public async Task<bool> AddOccupants(Elevator elevator, int count)
         {
-            if (count < 0)
-                return false; // Negative count is invalid
+            var validationResult = await LoadOccupants(elevator, count);
 
-            // Check if adding passengers exceeds the maximum allowed passenger count
-            if (elevator.PassengerCount + count <= elevator.MaxPassengerCount)
-            {
-                elevator.PassengerCount += count;
-                return true; // Successfully added passengers
-            }
-            return false; // Exceeded passenger capacity
+            if (validationResult != null)
+                return false;
+
+            elevator.PassengerCount += count;
+            return true; 
         }
-
-
     }
 }

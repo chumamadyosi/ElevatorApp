@@ -18,7 +18,6 @@ namespace Domain
         // Get elevator status by its ID
         public async Task<(string status, ErrorCode? errorCode)> GetElevatorStatusById(ulong elevatorId)
         {
-            // Since the operation is CPU-bound (in-memory list search), we use Task.FromResult instead of Task.Run
             var elevator = await Task.FromResult(_elevators.FirstOrDefault(e => e.Id == elevatorId));
 
             if (elevator == null)
@@ -36,7 +35,6 @@ namespace Domain
                     (elevator.Id, FormatElevatorStatus(elevator), (ErrorCode?)null)).ToList());
         }
 
-        // Helper method to format elevator status
         private string FormatElevatorStatus(Elevator elevator)
         {
             return $"Elevator {elevator.Id}: Floor {elevator.CurrentFloor} | Passengers: {elevator.PassengerCount} | Direction: {elevator.Direction}";

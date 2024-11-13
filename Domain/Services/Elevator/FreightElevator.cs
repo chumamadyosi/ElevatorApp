@@ -8,39 +8,35 @@ namespace Domain
 {
     public class FreightElevator : IElevator
     {
-        // Method to add occupants (non-async version)
-        public Task<bool> AddOccupants(Elevator elevator, int count)
+        // Method to add occupants to elevator
+        public async Task<bool> AddOccupants(Elevator elevator, int count)
         {
             if (count < 0)
             {
-                // Negative count is invalid for loading occupants
-                return Task.FromResult(false);
+                return false;
             }
 
             if (elevator.CurrentWeight + count <= elevator.MaxWeightCapacity)
             {
                 elevator.CurrentWeight += count; // Successfully add cargo weight
-                return Task.FromResult(true);
+                return true;
             }
-            return Task.FromResult(false); // Exceeded weight capacity
+            return false; // Exceeded weight capacity
         }
 
-        // Async method to load occupants
+        // Async method to load occupants// For cargo (weight in kg)
         public async Task<ErrorCode?> LoadOccupants(Elevator elevator, int count)
         {
             if (count < 0)
             {
-                return ErrorCode.ExceedsCapacity; // Handling negative count for invalid input
+                return ErrorCode.ExceedsCapacity; 
             }
-
-            // For cargo (weight in kg)
+            
             if (elevator.CurrentWeight + count > elevator.MaxWeightCapacity)
             {
-                return ErrorCode.ExceedsWeightCapacity; // Exceeded weight capacity
+                return ErrorCode.ExceedsWeightCapacity; 
             }
-
-            elevator.CurrentWeight += count; // Add cargo weight
-            return null; // Successfully loaded occupants
+            return null; 
         }
     }
 }

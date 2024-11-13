@@ -15,41 +15,63 @@ namespace Domain.ElevatorMovementService
 
         public async Task<ErrorCode?> MoveElevatorToDestinationFloor(Elevator elevator, int destinationFloor)
         {
-            if (destinationFloor < 1 || destinationFloor > elevator.MaxFloor)
-                return ErrorCode.FloorOutOfRange;
-
-            // Loop until the elevator reaches the destination floor
-            while (elevator.CurrentFloor != destinationFloor)
+            try
             {
-                // Determine direction based on current and destination floor
+                if (destinationFloor < 1 || destinationFloor > elevator.MaxFloor)
+                    return ErrorCode.FloorOutOfRange;
                 elevator.Direction = elevator.CurrentFloor < destinationFloor ? Direction.Up : Direction.Down;
 
-                // Update the current floor based on the direction
-                elevator.CurrentFloor += elevator.Direction == Direction.Up ? 1 : -1;
+                // Delay once initially to simulate movement starting
+                await Task.Delay(elevator.SpeedInMillisecondsPerFloor);
 
-                // Notify floor change and simulate movement delay based on elevator speed
-                await NotifyAndDelay(elevator.CurrentFloor, elevator.Direction, elevator.SpeedInMillisecondsPerFloor);
+                // Loop until the elevator reaches the destination floor
+                while (elevator.CurrentFloor != destinationFloor)
+                {
+
+                    elevator.CurrentFloor += elevator.Direction == Direction.Up ? 1 : -1;
+
+                    await NotifyAndDelay(elevator, destinationFloor);
+                }
+
+                elevator.Direction = Direction.Stationary;
+
+                // Final notification upon reaching the destination floor
+                await NotifyAndDelay(elevator, destinationFloor);
+
             }
-
-            // Once the elevator reaches the destination floor, set direction to stationary
-            elevator.Direction = Direction.Stationary;
-            elevator.PassengerCount = 0;
-
-            // Notify stationary state after reaching the destination
-            await NotifyAndDelay(elevator.CurrentFloor, elevator.Direction, elevator.SpeedInMillisecondsPerFloor);
-
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error moving elevator {elevator.Id}: {ex.Message}");
+            }
             return null;
         }
 
-
-        private async Task NotifyAndDelay(int currentFloor, Direction direction, int speedInMillisecondsPerFloor)
+        private async Task NotifyAndDelay(Elevator elevator, int destinationFloor)
         {
-            // Raise the event for floor change notifications
-            _elevatorEventService.RaiseFloorChangedEvent(currentFloor, direction);
+            bool isAtDestination = elevator.CurrentFloor == destinationFloor;
 
-            // Simulate the movement delay based on the speed configuration
-            await Task.Delay(speedInMillisecondsPerFloor);  // Speed-based delay
+            // Send notification to event service without blocking the main thread
+            _ = Task.Run(() =>
+            {
+                _elevatorEventService.RaiseFloorChangedEvent(elevator.CurrentFloor, elevator.Direction);
+                if (isAtDestination && elevator.Direction == Direction.Stationary)
+                {
+                    Console.WriteLine($"Elevator {elevator.Id} has reached floor {elevator.CurrentFloor} and is now stationary.");
+                }
+                else
+                {
+                    Console.WriteLine($"Elevator {elevator.Id} is at floor {elevator.CurrentFloor}, moving {elevator.Direction}");
+                }
+            });
+
+            // Delay only if not at destination, simulating elevator movement
+            if (!isAtDestination)
+            {
+                await Task.Delay(elevator.SpeedInMillisecondsPerFloor);
+            }
         }
+
+
 
         public async Task<ErrorCode?> MoveToFloorAsync(Elevator elevator, int targetFloor)
         {
@@ -59,20 +81,16 @@ namespace Domain.ElevatorMovementService
             // Loop until the elevator reaches the target floor
             while (elevator.CurrentFloor != targetFloor)
             {
-                // Determine direction based on current and target floor
                 elevator.Direction = elevator.CurrentFloor < targetFloor ? Direction.Up : Direction.Down;
 
-                // Update the current floor based on the direction
                 elevator.CurrentFloor += elevator.Direction == Direction.Up ? 1 : -1;
 
-                // Raise the event for floor change notifications
                 _elevatorEventService.RaiseFloorChangedEvent(elevator.CurrentFloor, elevator.Direction);
 
                 // Simulate delay for moving between floors based on elevator speed
                 await Task.Delay(elevator.SpeedInMillisecondsPerFloor); // Adjust delay for speed
             }
 
-            // Once the elevator reaches the target floor, set direction to stationary
             elevator.Direction = Direction.Stationary;
 
             // Notify stationary state after reaching the target floor
