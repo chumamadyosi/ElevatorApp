@@ -52,11 +52,9 @@ namespace Domain.ElevatorDispatch
             if (elevator == null)
                 return ErrorCode.NullElevator;
 
-            // Validate the requested floor
             if (requestedFloor < 1 || requestedFloor > elevator.MaxFloor)
                 return ErrorCode.FloorOutOfRange;
 
-            // If the elevator is already at the requested floor, no need to move
             if (elevator.CurrentFloor == requestedFloor)
             {
                 return null; // No need to move, just return

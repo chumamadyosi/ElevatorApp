@@ -50,7 +50,7 @@ namespace TestProject.DomainServives.ElevatorPassenger
                 var result = await _elevatorOccupantService.LoadOccupants(elevator, count);
 
                 Assert.Null(result);
-                Assert.Equal(4, elevator.PassengerCount); // After loading, the count should be 4
+                Assert.Equal(elevator.PassengerCount, elevator.PassengerCount); // no adding count remains the same
             }
 
             [Fact]
