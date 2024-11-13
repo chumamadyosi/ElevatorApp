@@ -1,4 +1,4 @@
-**Class Overview**
+**Documentation**
 
 The ElevatorConsoleManager class is the main console application responsible for handling user interactions to manage elevator operations. It leverages various dependencies injected through the constructor for elevator management, including factory services, building settings, and error handling.
 Core Methods and Workflow
